@@ -1,0 +1,11 @@
+# Anything that identifies a business or a person stays out of here.
+settings.py
+CREDENTIALS.txt
+session.json
+birthdays.json
+availability*.xlsx
+*Insert*.xlsx
+hours_*.xlsx
+payroll_*/
+logs/
+__pycache__/

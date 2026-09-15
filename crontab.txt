@@ -1,0 +1,27 @@
+# TSC automation. Server timezone is America/Chicago, so these are Central.
+# Every job goes through run_job.py so a failure messages the owner on Telegram.
+
+# Live sales. The first send of the day sits 30 minutes after the doors open, so
+# there is actually some trade in the number - 7am on a weekday and 8am at the
+# weekend would always report near zero.
+30 7 * * 1-5  /opt/tsc/venv/bin/python /opt/tsc/run_job.py live_sales
+30 8 * * 6,0  /opt/tsc/venv/bin/python /opt/tsc/run_job.py live_sales
+0 10,13,16,19,22 * * *  /opt/tsc/venv/bin/python /opt/tsc/run_job.py live_sales
+
+# Who works tomorrow - 7pm
+0 19 * * *  /opt/tsc/venv/bin/python /opt/tsc/run_job.py next_day
+
+# Staff birthdays - 7am, covers today and gives a heads up for tomorrow
+0 7 * * *  /opt/tsc/venv/bin/python /opt/tsc/run_job.py birthdays
+
+# End of Night - 1am every other Monday. The script itself checks the 14-day
+# cycle against the anchor date and exits quietly on an off week.
+0 1 * * 1  /opt/tsc/venv/bin/python /opt/tsc/run_job.py end_of_night
+
+# Weekly schedule CHECK - Sunday 8am. Read-only: it audits the week you have
+# built and reports problems. It never creates or changes a roster.
+0 8 * * 0  /opt/tsc/venv/bin/python /opt/tsc/run_job.py schedule_check
+
+# Payroll - 1am the Tuesday after End of Night. Checks the period is genuinely
+# finished before building anything; exits quietly on off weeks.
+0 1 * * 2  /opt/tsc/venv/bin/python /opt/tsc/run_job.py payroll
