@@ -27,7 +27,41 @@ BATCH_ID, TEMP_DEPT, EARNINGS_CODE, TAX_MULT = (
 
 OWNERS_EXCLUDED = settings.OWNERS
 
-ADJUSTMENTS = settings.ADJUSTMENTS
+def load_adjustments(period_start):
+    """Hours worked outside the timeclock, read from the Adjustments sheet of the
+    availability workbook and keyed to the fortnight they belong to.
+
+    It used to be a fixed number in a settings file, which meant it was applied
+    to every period whether it was earned or not. Returns
+    (this period's rows, names that had one before but not now) - the second half
+    matters because moving from a fixed figure to a per-period one introduces a
+    new way to be wrong: forgetting to enter it.
+    """
+    import openpyxl
+    path = os.path.join(HERE, "availability_template.xlsx")
+    if not os.path.exists(path):
+        return {}, []
+    wb = openpyxl.load_workbook(path, data_only=True)
+    if "Adjustments" not in wb.sheetnames:
+        return {}, []
+    ws = wb["Adjustments"]
+    rows = []
+    for r in range(2, ws.max_row + 1):
+        start, cafe, name = ws.cell(r, 1).value, ws.cell(r, 2).value, ws.cell(r, 3).value
+        hours = ws.cell(r, 4).value
+        if not (start and cafe and name and hours):
+            continue
+        start = str(start)[:10]
+        rows.append((start, str(cafe).strip(), norm_name(name), float(hours),
+                     (ws.cell(r, 5).value or "").strip()))
+    wanted = str(period_start)[:10]
+    current = {(c, n): (h, why) for s, c, n, h, why in rows if s == wanted}
+    earlier = {(c, n) for s, c, n, h, why in rows if s < wanted}
+    missing = sorted("%s %s" % (c, n) for (c, n) in earlier if (c, n) not in current)
+    return current, missing
+
+
+ADJUSTMENTS = {}
 FIRST_ROW = 6 + 2          # headers on row 6, row 7 blank, data from row 8
 
 
@@ -151,6 +185,8 @@ def write_file(cafe, people, tip_weeks, start, end, outdir):
 
 
 def build(start, end, outdir=None):
+    global ADJUSTMENTS
+    ADJUSTMENTS, missing_adj = load_adjustments(start)
     outdir = outdir or os.path.join(HERE, "payroll_%s_%s" % (start, end))
     os.makedirs(outdir, exist_ok=True)
     import run_report
@@ -158,13 +194,16 @@ def build(start, end, outdir=None):
                             dump=os.path.join(outdir, "source_hours-and-tips.xlsx"))
     rows = read_report(report)
     made, warnings_ = [], []
+    for m in missing_adj:
+        warnings_.append("%s had an adjustment in an earlier period but none entered "
+                         "for this one - check whether that is right" % m)
     with sync_playwright() as pw:
         b = pw.chromium.launch()
         ctx = b.new_context(storage_state=os.path.join(HERE, "session.json"))
-        for cafe in CAFE:
+        for cafe, cid in settings.CAFES:
             mine, warn = merge([r for r in rows if r["store"] == cafe])
             warnings_ += warn
-            tw = tips(ctx, CAFE[cafe]["id"], start, end)
+            tw = tips(ctx, cid, start, end)
             for pp in mine:
                 a = ADJUSTMENTS.get((cafe, norm_name(pp["name"])))
                 if a:

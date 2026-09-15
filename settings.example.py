@@ -26,10 +26,8 @@ OWNERS = {"owner one", "owner two"}
 # A clock-out after midnight on one of these people does not hold a night open.
 OWNERS_OK_AT_2AM = {"owner one", "owner two"}
 
-# Hours worked outside the timeclock. (cafe, name) -> (hours, reason)
-ADJUSTMENTS = {
-    ("CAFE1", "employee name"): (4.0, "travelling time"),
-}
+# Hours worked outside the timeclock now live in the Adjustments sheet of the
+# availability workbook, keyed to the fortnight they belong to.
 
 # People with a staff record at each cafe carrying different dates of birth.
 # Their birthday is taken from the first cafe listed in CAFES and the mismatch
