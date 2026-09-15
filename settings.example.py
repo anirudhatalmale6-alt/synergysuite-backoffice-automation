@@ -32,7 +32,11 @@ OWNERS_OK_AT_2AM = {"owner one", "owner two"}
 # People with a staff record at each cafe carrying different dates of birth.
 # Their birthday is taken from the first cafe listed in CAFES and the mismatch
 # warning is suppressed until the records are corrected.
-CONFLICT_MUTED = {"owner two"}
+# Where a person has a record at each cafe with different dates of birth, the
+# date confirmed as correct. Delete an entry once the records themselves agree.
+BIRTHDAY_CORRECT = {
+    # "employee name": "1990-01-01",
+}
 
 # Cycle anchors. EOD runs the Monday, payroll the Tuesday after.
 ANCHOR_MONDAY = (2026, 8, 17)

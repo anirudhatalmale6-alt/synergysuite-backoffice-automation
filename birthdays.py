@@ -18,7 +18,7 @@ CAFES = settings.CAFES
 CACHE = os.path.join(HERE, "birthdays.json")
 CT = ZoneInfo("America/Chicago")
 
-CONFLICT_MUTED = settings.CONFLICT_MUTED
+BIRTHDAY_CORRECT = settings.BIRTHDAY_CORRECT
 
 
 def refresh(ctx):
@@ -55,6 +55,11 @@ def load(ctx=None, max_age_hours=20):
     return people
 
 
+def norm_name(name):
+    import re as _re
+    return " ".join(_re.sub(r"[^a-z ]", "", (name or "").lower()).split())
+
+
 def dedupe(people):
     """Someone who works at both cafes has a record at each. Merge them by name,
     and if the two records disagree on the date of birth, keep both and say so -
@@ -68,10 +73,10 @@ def dedupe(people):
         cafes = "/".join(sorted({g["cafe"] for g in group}))
         if len(dobs) == 1:
             out.append({"name": group[0]["name"], "cafe": cafes, "dob": dobs[0]})
-        elif group[0]["name"].strip().lower() in CONFLICT_MUTED:
-            primary = settings.CAFES[0][0]
-            pick = next((g for g in group if g["cafe"] == primary), group[0])
-            out.append({"name": group[0]["name"], "cafe": pick["cafe"], "dob": pick["dob"]})
+        elif norm_name(group[0]["name"]) in BIRTHDAY_CORRECT:
+            # the owner has told us which of the two records is right
+            out.append({"name": group[0]["name"], "cafe": cafes,
+                        "dob": BIRTHDAY_CORRECT[norm_name(group[0]["name"])]})
         else:
             for g in group:
                 out.append({"name": group[0]["name"], "cafe": g["cafe"],
